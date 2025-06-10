@@ -8,11 +8,11 @@ class ConditionalDiscriminator(tf.keras.Model):
         self.flatten = layers.Flatten()
         self.reshape = layers.Reshape((28, 28, 1))
 
-        self.conv1 = layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same')
+        self.conv1 = SpectralNormalization(layers.Conv2D(64, 5, 2, padding='same'))
         self.lrelu1 = layers.LeakyReLU()
         self.dropout1 = layers.Dropout(0.3)
 
-        self.conv2 = layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same')
+        self.conv2 = SpectralNormalization(layers.Conv2D(128, 5, 2, padding='same'))
         self.lrelu2 = layers.LeakyReLU()
         self.dropout2 = layers.Dropout(0.3)
 
