@@ -1,6 +1,3 @@
-import tensorflow as tf
-from tensorflow.keras import layers
-
 class ConditionalGenerator(tf.keras.Model):
     def __init__(self, noise_dim=100, num_classes=10, label_embedding_dim=50):
         super().__init__()
@@ -8,23 +5,33 @@ class ConditionalGenerator(tf.keras.Model):
         self.label_embedding = layers.Embedding(num_classes, label_embedding_dim)
         self.flatten = layers.Flatten()
 
-        self.concat_dense = layers.Dense(7*7*256, use_bias=False)
+        initializer = tf.keras.initializers.GlorotUniform()
+
+        self.concat_dense = layers.Dense(7*7*256, use_bias=False, kernel_initializer=initializer)
         self.bn1 = layers.BatchNormalization()
         self.lrelu1 = layers.LeakyReLU()
         self.reshape = layers.Reshape((7, 7, 256))
+
         self.dropout = layers.Dropout(0.3)
 
-        self.deconv1 = SpectralNormalization(layers.Conv2DTranspose(256, 5, 1, padding='same', use_bias=False))
+        # Conv2DTranspose -> ResNet Block -> Conv2DTranspose
+        self.deconv1 = layers.Conv2DTranspose(256, (5, 5), strides=(1, 1), padding='same',
+                                              use_bias=False, kernel_initializer=initializer)
         self.bn2 = layers.BatchNormalization()
         self.lrelu2 = layers.LeakyReLU()
 
-        self.deconv2 = SpectralNormalization(layers.Conv2DTranspose(128, 5, 2, padding='same', use_bias=False))
+        # 🔥 新增 Residual Blocks（加入多層效果可 stack 多次）
+        self.res_block1 = ResidualBlock(256)
+        self.res_block2 = ResidualBlock(256)
+
+        self.deconv2 = layers.Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same',
+                                              use_bias=False, kernel_initializer=initializer)
         self.bn3 = layers.BatchNormalization()
         self.lrelu3 = layers.LeakyReLU()
 
-        self.deconv3 = SpectralNormalization(
-            layers.Conv2DTranspose(1, 5, 2, padding='same', use_bias=False, activation='tanh')
-        )
+        self.deconv3 = layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same',
+                                              use_bias=False, activation='tanh',
+                                              kernel_initializer=initializer)
 
     def call(self, inputs, training=False):
         noise_input, label_input = inputs
@@ -45,6 +52,10 @@ class ConditionalGenerator(tf.keras.Model):
         x = self.bn2(x, training=training)
         x = self.lrelu2(x)
         x = self.dropout(x, training=training)
+
+        # 🧱 ResNet Block 插入
+        x = self.res_block1(x, training=training)
+        x = self.res_block2(x, training=training)
 
         x = self.deconv2(x)
         x = self.bn3(x, training=training)
