@@ -1,0 +1,123 @@
+import os
+import time
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras import layers
+from models.generator import MultiBranchConditionalGenerator
+from models.discriminator import MultiBranchConditionalDiscriminator
+from utils.image_utils import generate_and_save_images
+from utils.losses import generator_loss, discriminator_loss
+from loadData import load_data
+from config import (
+    BUFFER_SIZE, BATCH_SIZE, NOISE_DIM, NUM_EXAMPLES_TO_GENERATE,
+    SAVE_INTERVAL, MODEL_SAVE_WEIGHT_PATH, DISC_SAVE_WEIGHT_PATH,
+    IMAGE_SAVE_PATH, LOG_SAVE_PATH
+)
+
+from tensorflow.keras.models import load_model
+train_dataset, test_dataset = load_data()
+generator = MultiBranchConditionalGenerator(num_classes=10, noise_dim=NOISE_DIM)
+generator.build([(None, NOISE_DIM), (None, )]) 
+generator.load_weights(MODEL_SAVE_WEIGHT_PATH.format(50))
+
+discriminator = MultiBranchConditionalDiscriminator(num_classes=10)
+discriminator.build([(None, 28, 28, 1), (None,)])
+discriminator.load_weights(DISC_SAVE_WEIGHT_PATH.format(50))
+
+generator_optimizer = tf.keras.optimizers.Adam(1e-4)
+discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+
+# 假設有 noise_dim 和 labels
+noise_dim = NOISE_DIM
+num_samples = 200  
+labels = tf.constant([i % 10 for i in range(num_samples)])  # 產生對應的 labels
+
+noise = tf.random.normal([num_samples, noise_dim])
+generated_images = generator((noise, labels), training=False)
+generated_images = (generated_images + 1.0) / 2.0
+
+real_images = []
+for img, lbl in test_dataset.take(num_samples):
+    real_images.append(img)
+
+real_images = tf.stack(real_images)
+real_images = tf.reshape(real_images, [-1, 28, 28, 1])
+real_images = (real_images + 1.0) / 2.0
+
+def preprocess_for_inception(images):
+    # 確保是4D張量 (batch, H, W, C)
+    if images.ndim == 3:  # (H, W, C)
+        images = tf.expand_dims(images, axis=0)
+    elif images.ndim == 2:  # (H, W)
+        images = tf.expand_dims(images, axis=-1)  # 變成 (H, W, 1)
+        images = tf.expand_dims(images, axis=0)   # 再加 batch 維度 (1, H, W, 1)
+
+    images = tf.image.resize(images, [299, 299])
+    if images.shape[-1] == 1:
+        images = tf.image.grayscale_to_rgb(images)
+    images = tf.clip_by_value(images, 0.0, 1.0)
+    return tf.cast(images, tf.float32)
+
+
+def extract_inception_features(images, batch_size=64):
+    inception_model = tf.keras.applications.InceptionV3(include_top=False, pooling='avg', input_shape=(299,299,3))
+    features = []
+    for i in range(0, images.shape[0], batch_size):
+        batch = images[i:i+batch_size]
+        batch = preprocess_for_inception(batch)
+        batch_features = inception_model(batch, training=False)
+        features.append(batch_features)
+    return tf.concat(features, axis=0).numpy()
+
+def gaussian_kernel(x, y, sigma=1.0):
+    sq_dist = np.sum((x[:, np.newaxis] - y[np.newaxis, :]) ** 2, axis=-1)
+    return np.exp(-sq_dist / (2 * sigma**2))
+
+def compute_kid(real_features, gen_features, subset_size=500, n_subsets=20):
+    # 隨機抽樣計算 KID（近似）
+    n_real = real_features.shape[0]
+    n_gen = gen_features.shape[0]
+    m = min(subset_size, n_real, n_gen)
+
+    kid_scores = []
+    for _ in range(n_subsets):
+        idx_real = np.random.choice(n_real, m, replace=False)
+        idx_gen = np.random.choice(n_gen, m, replace=False)
+        x = real_features[idx_real]
+        y = gen_features[idx_gen]
+
+        k_xx = gaussian_kernel(x, x)
+        k_yy = gaussian_kernel(y, y)
+        k_xy = gaussian_kernel(x, y)
+
+        kid = np.mean(k_xx) + np.mean(k_yy) - 2 * np.mean(k_xy)
+        kid_scores.append(kid)
+    return np.mean(kid_scores), np.std(kid_scores)
+
+def tsne_visualization(real_features, generated_features, perplexity=30):
+    features = np.concatenate([real_features, generated_features], axis=0)
+    tsne = TSNE(n_components=2, perplexity=perplexity, random_state=42)
+    features_2d = tsne.fit_transform(features)
+
+    plt.figure(figsize=(6,4))
+    plt.scatter(features_2d[:len(real_features),0], features_2d[:len(real_features),1], c='blue', label='Real', alpha=0.5)
+    plt.scatter(features_2d[len(real_features):,0], features_2d[len(real_features):,1], c='red', label='Generated', alpha=0.5)
+    plt.legend()
+    plt.title("t-SNE Visualization of Real and Generated Images Features")
+    plt.show()
+
+# ===== 使用範例 =====
+# real_images, generated_images 請確保是 tf.Tensor，且範圍在 [0,1]
+real_features = extract_inception_features(real_images)
+generated_features = extract_inception_features(generated_images)
+
+real_features = (real_features - np.mean(real_features, axis=0)) / (np.std(real_features, axis=0) + 1e-6)
+generated_features = (generated_features - np.mean(generated_features, axis=0)) / (np.std(generated_features, axis=0) + 1e-6)
+
+
+kid_mean, kid_std = compute_kid(real_features, generated_features)
+print(f"KID score: {kid_mean:.6f} ± {kid_std:.6f}")
+
+tsne_visualization(real_features, generated_features)
