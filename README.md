@@ -1,14 +1,14 @@
 
-# 🧵 Multi-Branch Conditional GAN on Fashion MNIST
+# Multi-Branch Conditional GAN on Fashion MNIST
 
 
-## 🌟 Overview
+## Overview
 
 This repository presents a **Multi-Branch Conditional GAN (MB-CGAN)** designed to generate class-specific fashion images using the **Fashion MNIST dataset**. Model 3 introduces a class-aware architecture that improves generation quality and training stability, particularly for imbalanced categories like Sandal, Sneaker, and Ankle Boot.
 
 ---
 
-## 🎯 Key Features
+## Key Features
 
 - **Branch-specific Generator:** Shared base encoder, followed by distinct sub-generators per class.
 - **Conditional Discriminator:** Shared convolutional layers with class-specific binary decision branches (via `tf.where`).
@@ -17,7 +17,7 @@ This repository presents a **Multi-Branch Conditional GAN (MB-CGAN)** designed t
 
 ---
 
-## 🛠️ Training Configuration
+##  Training Configuration
 
 | Setting            | Value        |
 |-------------------|--------------|
@@ -28,19 +28,19 @@ This repository presents a **Multi-Branch Conditional GAN (MB-CGAN)** designed t
 
 ---
 
-## 🧪 Results Summary
+## Results Summary
 
-### 📉 Loss Curves
+### Loss Curves
 <p align="center">
   <img src="pic/loss.png" alt="Model 3 Loss Comparison" width="600"/>
 </p>
 *Model 3 shows smoother convergence with increasing discriminator loss, indicating its improved realism.*
 
-### 📊 KID Score  
+### KID Score  
 - **Final Score:** `0.010000 ± 0.000000`  
 - *Generated features show strong similarity to real images using InceptionV3 and Gaussian kernels.*
 
-### 🌈 t-SNE Feature Distribution  
+### t-SNE Feature Distribution  
 <p align="center">
   <img src="pic/t-sne.jpg" alt="t-SNE Real vs Generated" width="600"/>
 </p>
@@ -48,15 +48,15 @@ This repository presents a **Multi-Branch Conditional GAN (MB-CGAN)** designed t
 
 ---
 
-## 🧬 Model Architecture Diagram
+## Model Architecture Diagram
 
 <p align="center">
-  <img src="images/model3_architecture.png" alt="Model 3 Architecture" width="600"/>
+  <img src="pic/model arch.png" alt="Model 3 Architecture" width="600"/>
 </p>
 
 ---
 
-## 🔮 Future Work
+## Future Work
 
 - **Stage-wise Branch Training:**  
   - *Phase 1:* Train on visually similar classes (e.g., Coat vs. Pullover)  
