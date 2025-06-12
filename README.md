@@ -32,7 +32,7 @@ This repository presents a **Multi-Branch Conditional GAN (MB-CGAN)** designed t
 
 ### 📉 Loss Curves
 <p align="center">
-  <img src="pic/model3_loss_curve.png" alt="Model 3 Loss Comparison" width="600"/>
+  <img src="pic/loss.png" alt="Model 3 Loss Comparison" width="600"/>
 </p>
 *Model 3 shows smoother convergence with increasing discriminator loss, indicating its improved realism.*
 
@@ -42,7 +42,7 @@ This repository presents a **Multi-Branch Conditional GAN (MB-CGAN)** designed t
 
 ### 🌈 t-SNE Feature Distribution  
 <p align="center">
-  <img src="pic/t-sne.png" alt="t-SNE Real vs Generated" width="600"/>
+  <img src="pic/t-sne.jpg" alt="t-SNE Real vs Generated" width="600"/>
 </p>
 *Generated samples closely cluster with real images in the latent space.*
 
