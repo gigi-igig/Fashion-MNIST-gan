@@ -17,6 +17,7 @@ from config import (
 )
 
 from tensorflow.keras.models import load_model
+train_dataset, test_dataset = load_data()
 generator = MultiBranchConditionalGenerator(num_classes=10, noise_dim=NOISE_DIM)
 generator.build([(None, NOISE_DIM), (None, )]) 
 generator.load_weights(MODEL_SAVE_WEIGHT_PATH.format(50))
@@ -25,19 +26,17 @@ discriminator = MultiBranchConditionalDiscriminator(num_classes=10)
 discriminator.build([(None, 28, 28, 1), (None,)])
 discriminator.load_weights(DISC_SAVE_WEIGHT_PATH.format(50))
 
-
 generator_optimizer = tf.keras.optimizers.Adam(1e-4)
 discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
 
 # 假設有 noise_dim 和 labels
 noise_dim = NOISE_DIM
-num_samples = 200  # 或你想產生的數量
+num_samples = 200  
 labels = tf.constant([i % 10 for i in range(num_samples)])  # 產生對應的 labels
 
 noise = tf.random.normal([num_samples, noise_dim])
 generated_images = generator((noise, labels), training=False)
-
-train_dataset, test_dataset = load_data()
+generated_images = (generated_images + 1.0) / 2.0
 
 real_images = []
 for img, lbl in test_dataset.take(num_samples):
@@ -45,11 +44,7 @@ for img, lbl in test_dataset.take(num_samples):
 
 real_images = tf.stack(real_images)
 real_images = tf.reshape(real_images, [-1, 28, 28, 1])
-
-import tensorflow as tf
-from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
-import numpy as np
+real_images = (real_images + 1.0) / 2.0
 
 def preprocess_for_inception(images):
     # 確保是4D張量 (batch, H, W, C)
