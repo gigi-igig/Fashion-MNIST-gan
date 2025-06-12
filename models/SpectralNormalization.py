@@ -28,7 +28,7 @@ class SpectralNormalization(layers.Wrapper):
             u = tf.math.l2_normalize(tf.matmul(v, w_reshaped))
         sigma = tf.matmul(tf.matmul(v, w_reshaped), tf.transpose(u))
         w_norm = self.w / sigma
-        self.w.assign(w_norm)  # ✅ assign 方法
+        self.w.assign(w_norm) 
 
         self.u.assign(u)
         return self.layer(inputs)
