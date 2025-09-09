@@ -51,7 +51,7 @@ This repository presents a **Multi-Branch Conditional GAN (MB-CGAN)** designed t
 ## Model Architecture Diagram
 
 <p align="center">
-  <img src="pic/model_arch.jng" alt="Model 3 Architecture" width="600"/>
+  <img src="pic/model_arch.jpg" alt="Model 3 Architecture" width="600"/>
 </p>
 
 ---
